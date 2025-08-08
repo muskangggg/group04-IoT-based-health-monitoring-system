@@ -1,0 +1,87 @@
+#include <WiFi.h>
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+#include <WebServer.h>
+#include <MAX30105.h>
+#include "heartRate.h"
+
+#define MQ3_PIN 34
+
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+MAX30105 particleSensor;
+WebServer server(80);
+
+const char* ssid = "Alim ulla";
+const char* password = "azanmd2010";
+
+// SpO2 Estimation
+float calculateSpO2(uint32_t ir, uint32_t red) {
+  if (ir < 10000 || red < 10000) return 0; // No finger detected or too low
+
+  float ratio = (float)red / (float)ir;
+  float spO2 = 110.0 - 25.0 * ratio;
+
+  // Clamp value to realistic range
+  if (spO2 > 100) spO2 = 100;
+  if (spO2 < 0) spO2 = 0;
+
+  return spO2;
+}
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+
+  if (!mlx.begin()) {
+    Serial.println("MLX90614 not found!");
+    while (1);
+  }
+
+  if (!particleSensor.begin(Wire)) {
+    Serial.println("MAX30102 not found!");
+    while (1);
+  }
+
+  particleSensor.setup();
+  particleSensor.setPulseAmplitudeRed(0x0A);   
+  particleSensor.setPulseAmplitudeGreen(0);    
+
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nConnected!");
+  Serial.println("IP Address: " + WiFi.localIP().toString());
+
+  server.on("/data", HTTP_GET, []() {
+    float temperature = mlx.readObjectTempC();
+    int alcoholRaw = analogRead(MQ3_PIN);
+    float alcoholPercent = map(alcoholRaw, 0, 4095, 0, 100);
+
+    long irValue = particleSensor.getIR();
+    long redValue = particleSensor.getRed();
+
+    bool beatDetected = checkForBeat(irValue);
+    float spO2 = calculateSpO2(irValue, redValue);
+
+    String json = "{";
+    json += "\"bodyTemp\":" + String(temperature, 2) + ",";
+    json += "\"alcoholLevel\":" + String(alcoholPercent, 2) + ",";
+    json += "\"pulseRaw\":" + String(irValue) + ",";
+    json += "\"redRaw\":" + String(redValue) + ",";
+    json += "\"spO2\":" + String(spO2, 2) + ",";
+    json += "\"beatDetected\":" + String(beatDetected ? "true" : "false");
+    json += "}";
+
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "application/json", json);
+  });
+
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}
