@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Health Monitoring System</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <h1>Health Monitoring System</h1>
+
+    <!-- Gauges Section -->
+    <div class="meters" style="flex-wrap: wrap; justify-content: center; gap: 40px;">
+        <!-- Body Temperature Gauge -->
+        <div class="gauge-block">
+            <canvas id="bodyTempGauge"></canvas>
+            <p id="tempAlert" style="color: red;"></p>
+        </div>
+
+        <!-- Pulse Gauge -->
+        <div class="gauge-block">
+            <canvas id="pulseGauge"></canvas>
+        </div>
+    </div>
+
+    <!-- Live Sensor Readings Section -->
+    <div style="margin-top: 30px; text-align: center;">
+        <h3>Live Sensor Readings</h3>
+        <p>Body Temperature: <span id="bodyTemp">--</span> °C</p>
+        <p>Pulse Rate: <span id="pulseRate">--</span> BPM</p>
+        <p id="tempAlert"></p>
+        <p id="pulseAlert"></p>
+    </div>
+
+
+    <script src="script.js"></script>
+</body>
+
+</html>
